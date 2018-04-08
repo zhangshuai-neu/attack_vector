@@ -1,0 +1,5 @@
+直接将文件解压好的文件放到/opt目录下,命名为gcc-arm-none-eabi
+
+执行脚本 conf_arm_none_eabi_gcc.sh
+
+source /etc/profile 或者 注销即可
