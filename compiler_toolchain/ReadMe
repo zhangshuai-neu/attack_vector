@@ -1,0 +1,8 @@
+直接将文件解压到/usr/bin下面
+
+修改环境变量
+vim /etc/profile
+添加export PATH=/usr/bin/gcc-arm-none-eabi-5_4-2016q3/bin:$PATH
+
+source /etc/profile
+reboot

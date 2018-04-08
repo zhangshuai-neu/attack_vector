@@ -1,0 +1,18 @@
+dependency:
+sudo apt-get install libsub-1.0
+
+installation
+./configure --enable-ftdi --enable-stlink --enable-jlink 
+make 
+sudo make install
+将解压完毕的文件中的openocd-0.7.0/contrib中的openocd.dev 复制到
+	/etc/udev/rules.d/中
+
+running
+在具体运行的时候要开两个终端
+终端1:
+切换到目录 /usr/local/share/openocd/scripts
+执行openocd -f interface/stlink-v2.cfg -f target/stm32f4x_stlink.cfg
+
+终端2:
+执行telnet 4444,与下位机相连

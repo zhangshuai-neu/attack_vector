@@ -1,0 +1,259 @@
+Questions
+------------
+Do the enumerated approaches manage to address the issues present in:
+"A Large-Scale Analysis of the Security of Embedded Firmwares"
+"When Firmware Modifications Attack: A Case Study of Embedded Exploitation"
+
+To do:
+-------
+- Gather statistics on randomization. How randomized is the binary if we
+  restrict the code and data spaces?
+- Memory mirroring: is it possible to set up the scenario with a set of
+  permissions for the overlay where mirroring of memory segments over the
+  address space cause protected areas to be accessible from other addresses?
+  Demonstrate experimentally if possible. If mirroring is possible, can we
+  setup the necessary number of overlays to cover them properly? The question
+  itself sounds a bit like the knapsack problem, which is NP-Complete. In
+  effect, this is a two part question:
+  - If memory mirroring takes place, can overlays handle it?
+  - If so, can we find an optimal overlay structure to cover it for a set of m
+	regions with n overlays in polynomial time?
+- Construct memory oracle.
+
+
+
+Breaking HAFIX
+------------------
+Assumption: read/write what/where vulnerability
+Attack Model: randomization has been bypassed
+Goal: launch a code reuse attack
+
+Limitation:
+- Control-flow state memory is not accessible by software and can't be modified
+  without the use of CFI instructions.
+- Proper backward edge instrumentation (best possible CFG).
+
+HAFIX/IA-32
+- Dump stack.
+- Stack backtrace reveals state of CFI memory.
+- Redirect control flow to an active state.
+
+or:
+- Use any type of forward edge redirection:
+  - vtable pointer corruption
+  - indirect jump target corruption
+
+HAFIX/LEON3
+- State memory is implemented as a stack, ROP not possible without violating
+  state memory under the assumption of unique labels.
+- Stack backtrace no longer helpful.
+- Must use indirect jumps/calls only.
+
+
+Breaking LR2
+-------------
+Assumption: read/write what/where vulnerability
+Attack Model: only the above vulnerability is available
+Goal: bypass randomization/leak randomization secrets
+
+Limitation:
+- Load/store is gated to access only the upper portion of memory (direct reads
+  from .text are not possible)
+- All pointers have been properly instrumented.
+
+Attack:
+- Loads from data memory are still allowed.
+- Randomization of data section is limited given the split address space.
+- Filling heap with large allocations further reduce amount of free
+  space/unmapped pages. WARNING: heap remains often unused in embedded systems.
+- Use known system information or crash resilient oracle to disclose control
+  flow data from critical portions.
+- Reading from the stack yields return addresses.
+- Reading from the heap yields vtable pointers. The vtables themselves may
+  reside in read only memory, outside the area which our read/write what where
+  vulnerability can reach.
+- Reconstruct layout with disclosed information.
+
+
+SMART
+------
+Assumption:
+- attestation protocol in place
+- read/write what where vulnerability in place
+
+Attack model:
+- only the above vulnerability is available
+
+Goal:
+- arbitrary code execution
+
+Limitation:
+- No physical attacks are allowed
+
+Attack:
+- Find gadget suite with copy of firmware
+- Deploy CRA attack by corrupting the necessary addresses
+
+
+C-FLAT
+-------
+Assumption:
+- Attestation protocol in place
+- Read/write what/where vulnerability
+
+Goal:
+- Arbitrary code execution
+
+Limitation:
+- No physical attacks are allowed
+- Perfect CFG
+
+Attack:
+- C-FLAT can't deal with interrupts, this is an avenue of attack.
+- Trigger an interrupt
+- Use side effects from interrupt to alter regular execution
+- C-FLAT breaks loops into subprograms
+- Utilizing this behaviour, we can alter control flow to include unintended
+  iterations
+
+Limitation:
+- Allow physical attacks
+- Perfect CFG
+
+Attack:
+- Trivial: replace code while maintaining control flow graph or something
+  similar to it:
+  - Control-flow is hashed, not the instructions themselves
+  - As long as basic blocks remain the same size, the instructions contained
+	within matter not
+  - In ARM platforms (previous to ARMv8) we can exploit conditional execution
+	to our advantage without altering the control flow graph
+- Non-trivial: remove trampolines to attestation code:
+  - Allow first basic block to remain as is
+  - Allow trampoline to attestation/hash engine
+  - Allow the result to be stored
+  - Replace everything else, eliminating trampolines to attestation/hash
+	engine:
+	- Attestation requests will use the computed and stored block, resulting in
+	  a valid control-flow signature.
+
+
+Embedded FW diversity for SEM
+------------------------------
+Assumption:
+- Read/write what/where vulnerability
+- Unable to access encryption secret
+
+Goal:
+- Arbitrary code execution
+- Tampering of reads
+
+Limitation:
+- No physical attacks are allowed
+
+Attack:
+- Tampering of reads is straightforward:
+  - Use read/write what/where vulnerability to
+    disclose address of stored read
+  - Corrupt value
+- Arbitrary code execution:
+  - Use read/write what/where vulnerability to disclose firmware
+    - We can utilize the firmware structure required by the architecture to
+	  disclose call sites
+  - Dump stack portions using vulnerability
+  - Utilize call site information to obtain K_1, K_2, and K_3
+  - Corrupt stack and launch CRA
+- Arbitrary code execution
+  - System does not protect against JOP/COOP
+  - Set up fake object
+  - Utilize fake object to launch CRA
+
+
+TyTAN
+------
+Assumption:
+- Untrusted operating system
+- Read/write what/where vulnerability
+
+Goal:
+- Arbitrary code execution
+- Fake device functionality
+
+Limitation:
+- No physical access
+
+Attack:
+- TyTAN performs no control flow integrity:
+  - A read/write what/where vulnerability is capable of triggering a CRA within
+	a secured task
+- OS tampering:
+  - reading of the paper suggests that the operating system is responsible for
+	rescheduling tasks
+  - whether a task is restarted or rescheduled is set by setting a value in a
+	register
+  - what happens if the OS changes that value on task restart/reschedule?
+
+Symbiotes
+----------
+Assumption:
+- Symbiote injected
+- Read/write what/where vulnerability
+
+Goal:
+- Arbitrary code execution
+
+Limitation:
+- Symbiote is operational and properly injected
+
+Attack:
+- Use read vulnerability to disclose program layout, bypassing randomization
+- Build ROP/JOP/COOP chain
+- Deploy ROP/JOP/COOP chain
+
+Overlays
+---------
+Assumption:
+- Read/write what/where vulnerability
+- Proper memory segmentation/protection is available
+
+Limitation:
+- Unpriviledge read/write what/where vulnerability causes a hard fault when
+  accessing priviledged areas.
+
+Goal:
+- Derandomization of firmware
+
+Attack 1:
+- Architectural memory layout of device is known
+- Entry point is known because it is defined by the architecture
+- Start a disclose and disassembly chain from the entry point
+
+Attack 2:
+- If entry point resides in a protected place
+- Memory space is still limited to provide proper randomization [KB to a few MB
+  of memory]
+- use architecture knowledge to disclose probable area where code/data resides
+- use information to derandomize firmware
+
+Attack 3:
+- Vulnerability resides in priviledged code:
+- Follow attack pattern 1 without any limitations [priviledged code will be
+  able to access all of the memory space]
+
+DARPA
+-------
+Assumption:
+- Read/write what/where vulnerability
+- Proper memory protection
+
+Limitation:
+- No physical attacks on devices in the network.
+
+Goal:
+- Device compromise.
+
+Attack 1:
+- IoT goes nuclear for attack, all devices compromised.
+
+Attack 2:
+- Bypassing attestation: use CRAs.
