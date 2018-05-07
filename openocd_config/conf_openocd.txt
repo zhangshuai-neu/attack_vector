@@ -13,12 +13,14 @@ sudo make install
 终端1:
 切换到目录 /usr/local/share/openocd/scripts
 
-针对STM32f4系列
-执行openocd -f ./stlink-v2.cfg -f ./stm32f4x_stlink.cfg
+使用STlink:
+	针对STM32f4系列
+	执行openocd -f ./stlink-v2.cfg -f ./stm32f4x_stlink.cfg
+	针对STM32f1系列
+	执行openocd -f ./stlink-v2.cfg -f ./stm32f1x_stlink.cfg
 
-针对STM32f1系列
-执行openocd -f ./stlink-v2.cfg -f ./stm32f1x_stlink.cfg
-
+使用Jlink:
+	sudo openocd -f interface/jlink.cfg -f target/stm32f4x.cfg
 
 终端2:
 执行telnet localhost 4444,与下位机相连

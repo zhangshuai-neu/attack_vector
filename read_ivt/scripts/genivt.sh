@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#! /bin/bash
 
 usage() {
 	echo "${0} [-i section_name] [-t number]" >&2
