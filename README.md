@@ -8,6 +8,8 @@
 编译安装说明：
 https://github.com/texane/stlink/blob/master/doc/compiling.
 
+另外：使用Jlink也可
+
 
 2.openocd（调试工具）
 
